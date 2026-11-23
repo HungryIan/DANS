@@ -1,0 +1,179 @@
+@if (loading()) {
+  <div class="loading"><span class="spinner"></span>Loading report…</div>
+} @else if (loadError()) {
+  <div class="page page-narrow">
+    <div class="card empty">
+      <span class="icon">error</span>
+      <h3>Report unavailable</h3>
+      <p>{{ loadError() }}</p>
+      <a class="btn" [routerLink]="auth.isStaff() ? '/monitor' : '/my-reports'">Go back</a>
+    </div>
+  </div>
+} @else if (detail(); as d) {
+  <div class="page">
+    <div>
+      <a class="back-link" [routerLink]="auth.isStaff() ? '/monitor' : '/my-reports'">
+        <span class="icon">arrow_back</span>{{ auth.isStaff() ? 'Incident monitor' : 'My reports' }}
+      </a>
+      <header class="page-header">
+        <div class="row top">
+          <span [class]="'type-symbol ' + (d.report.severity | sevClass)"><span class="icon">{{ d.report.type | typeIcon }}</span></span>
+          <div>
+            <h1>{{ d.report.type }} in {{ d.report.barangayName }}</h1>
+            <p><span class="strong">{{ d.report.referenceNo }}</span> · reported {{ d.report.createdAt | timeAgo }}</p>
+          </div>
+        </div>
+        <div class="row gap-sm">
+          <app-badge [value]="d.report.severity" />
+          <app-badge [value]="d.report.status" />
+        </div>
+      </header>
+    </div>
+
+    @if (d.hasActiveAlert) {
+      <div class="callout callout-warning">
+        <span class="icon">campaign</span>
+        <div>An alert for this incident is active. It is lifted automatically when the report is resolved or dismissed. <a routerLink="/alerts">View alerts</a></div>
+      </div>
+    }
+
+    <div class="split">
+      <div class="stack">
+        <section class="card">
+          <div class="card-header"><h2 class="card-title"><span class="icon">info</span>Details</h2></div>
+          <div class="card-body stack">
+            <p class="pre-line">{{ d.report.description }}</p>
+            <dl class="details">
+              <div class="full"><dt>Location</dt><dd>{{ d.report.location }}, Barangay {{ d.report.barangayName }}</dd></div>
+              <div><dt>People affected</dt><dd>{{ d.report.peopleAffected ?? 'Not specified' }}</dd></div>
+              <div><dt>Status</dt><dd>{{ descriptions[d.report.status] }}</dd></div>
+              <div><dt>Reported by</dt><dd>{{ d.report.reporterName }}</dd></div>
+              <div><dt>Contact number</dt><dd><a class="link" [href]="'tel:' + d.report.reporterPhone">{{ d.report.reporterPhone }}</a></dd></div>
+              <div><dt>Date reported</dt><dd>{{ d.report.createdAt | date: dateTime }}</dd></div>
+              <div><dt>Assigned to</dt><dd>{{ d.report.assignedToName ?? 'Not yet assigned' }}</dd></div>
+              @if (d.report.closedAt) {
+                <div><dt>Closed</dt><dd>{{ d.report.closedAt | date: dateTime }}</dd></div>
+              }
+            </dl>
+          </div>
+        </section>
+
+        @if (markers().length > 0) {
+          <section class="card">
+            <div class="card-header">
+              <h2 class="card-title"><span class="icon">map</span>Pinned location</h2>
+              @if (directionsUrl(); as url) {
+                <a class="btn btn-sm" [href]="url" target="_blank" rel="noopener"><span class="icon">directions</span>Directions</a>
+              }
+            </div>
+            <div class="card-body"><app-map [markers]="markers()" height="280px" label="Incident location" /></div>
+          </section>
+        }
+
+        <section class="card">
+          <div class="card-header"><h2 class="card-title"><span class="icon">timeline</span>Timeline</h2></div>
+          <div class="card-body">
+            <ol class="timeline">
+              @for (u of d.updates; track u.id) {
+                <li>
+                  <span class="timeline-dot" [class.status]="u.status"></span>
+                  <div class="timeline-head">
+                    @if (u.status) { <app-badge [value]="u.status" /> }
+                    <span class="strong">{{ u.userName }}</span>
+                    <span class="muted small">{{ u.userRole }}</span>
+                    <span class="timeline-time" [title]="u.createdAt | date: dateTime">{{ u.createdAt | timeAgo }}</span>
+                  </div>
+                  @if (u.note) { <p class="timeline-note">{{ u.note }}</p> }
+                </li>
+              }
+            </ol>
+          </div>
+        </section>
+      </div>
+
+      <aside class="stack">
+        @if (d.canManage) {
+          <section class="card">
+            <div class="card-header"><h2 class="card-title"><span class="icon">fact_check</span>Update status</h2></div>
+            <form class="card-body form" [formGroup]="updateForm" (ngSubmit)="submitUpdate()">
+              <label class="field">
+                <span class="field-label">New status</span>
+                <select class="input" formControlName="status">
+                  <option value="">Keep as {{ d.report.status }}</option>
+                  @for (s of statuses; track s) {
+                    @if (s !== d.report.status) {
+                      <option [value]="s">{{ s }} — {{ descriptions[s] }}</option>
+                    }
+                  }
+                </select>
+              </label>
+              @if (selectedStatus() === 'Verified') {
+                <label class="check">
+                  <input type="checkbox" formControlName="notifyResidents" />
+                  Alert residents of {{ d.report.barangayName }} now
+                </label>
+                <span class="hint">Sends an area alert with safety instructions. It ends automatically when the report is closed.</span>
+              }
+              <label class="field">
+                <span class="field-label">Note <span class="optional">(optional)</span></span>
+                <textarea class="input" formControlName="note" rows="3" maxlength="1000" placeholder="What was done or decided?"></textarea>
+              </label>
+              <button type="submit" class="btn btn-primary" [disabled]="busy()">Save update</button>
+            </form>
+          </section>
+
+          <section class="card">
+            <div class="card-header"><h2 class="card-title"><span class="icon">assignment_ind</span>Assignment</h2></div>
+            <div class="card-body form">
+              <label class="field">
+                <span class="field-label">Responder / volunteer</span>
+                <select class="input" [formControl]="assignee">
+                  <option [ngValue]="null">Not assigned</option>
+                  @for (u of assignable(); track u.id) {
+                    <option [ngValue]="u.id">{{ u.fullName }} ({{ u.role }}{{ u.barangayName ? ', ' + u.barangayName : '' }})</option>
+                  }
+                </select>
+              </label>
+              <button type="button" class="btn" (click)="assign()" [disabled]="busy() || assignee.value === d.report.assignedToId">Save assignment</button>
+              <a class="btn btn-ghost" routerLink="/alerts/new" [queryParams]="{ reportId: d.report.id }">
+                <span class="icon">campaign</span>Write a custom alert
+              </a>
+            </div>
+          </section>
+        } @else if (d.canUpdate) {
+          <section class="card">
+            <div class="card-header"><h2 class="card-title"><span class="icon">fact_check</span>Your assignment</h2></div>
+            <form class="card-body form" [formGroup]="updateForm" (ngSubmit)="submitUpdate()">
+              <label class="field">
+                <span class="field-label">Field note <span class="optional">(optional)</span></span>
+                <textarea class="input" formControlName="note" rows="3" maxlength="1000" placeholder="e.g. Team on site, 5 families evacuated"></textarea>
+              </label>
+              @if (!isClosed()) {
+                <div class="row wrap gap-sm">
+                  @if (d.report.status !== 'Responding') {
+                    <button type="button" class="btn btn-primary" (click)="quickStatus('Responding')" [disabled]="busy()">
+                      <span class="icon">directions_run</span>Mark responding
+                    </button>
+                  }
+                  <button type="button" class="btn" (click)="quickStatus('Resolved')" [disabled]="busy()">
+                    <span class="icon">task_alt</span>Mark resolved
+                  </button>
+                </div>
+              }
+              <button type="submit" class="btn btn-ghost" [disabled]="busy()">Add note only</button>
+            </form>
+          </section>
+        } @else {
+          <section class="card card-body stack-sm">
+            <h2 class="card-title"><span class="icon">help</span>What happens next?</h2>
+            <p class="text-2 small">
+              Officials review new reports, confirm them and send responders. Each step appears in the timeline and you
+              get a notification whenever the status changes.
+            </p>
+            <p class="small">In immediate danger? Call <a class="link" href="tel:911">911</a>.</p>
+          </section>
+        }
+      </aside>
+    </div>
+  </div>
+}

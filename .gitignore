@@ -1,0 +1,34 @@
+# .NET build output
+bin/
+obj/
+*.user
+.vs/
+
+# Local SQLite database (recreated with demo data on startup)
+*.db
+*.db-shm
+*.db-wal
+
+# Secrets you may add for production
+appsettings.Production.json
+
+# Development token-signing key, created on the first start (see Infrastructure/DevelopmentSigningKey.cs)
+dev-signing.key
+
+# Local tool settings (Claude Code / editors)
+.claude/
+
+# HTTPS development certificate exported for the Angular dev server
+frontend/certs/
+
+# Production Angular build (npm run build writes it into the API)
+backend/Dans.Api/wwwroot/
+
+# Node / Angular (see also frontend/.gitignore)
+node_modules/
+frontend/dist/
+frontend/.angular/
+
+# OS files
+.DS_Store
+Thumbs.db

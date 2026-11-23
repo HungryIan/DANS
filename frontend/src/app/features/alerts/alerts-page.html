@@ -1,0 +1,63 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <h1>Emergency alerts</h1>
+      <p>Official warnings and instructions from local officials. New alerts appear here instantly.</p>
+    </div>
+    @if (auth.isManager()) {
+      <div class="page-actions">
+        <a class="btn btn-danger" routerLink="/alerts/new"><span class="icon">add_alert</span>Issue alert</a>
+      </div>
+    }
+  </header>
+
+  <div class="row wrap" style="justify-content: space-between">
+    <div class="tabs" role="tablist" aria-label="Alert lists">
+      <button type="button" role="tab" class="tab" [class.active]="tab() === 'active'" [attr.aria-selected]="tab() === 'active'" (click)="tab.set('active')">
+        <span class="icon">campaign</span>Active <span class="count">{{ store.alerts().length }}</span>
+      </button>
+      <button type="button" role="tab" class="tab" [class.active]="tab() === 'past'" [attr.aria-selected]="tab() === 'past'" (click)="tab.set('past')">
+        <span class="icon">history</span>History
+      </button>
+    </div>
+    <label class="field" style="width: 240px">
+      <span class="sr-only">Filter by barangay</span>
+      <select class="input" (change)="onBarangayChange($event)">
+        <option value="">All barangays</option>
+        @for (b of barangays(); track b.id) {
+          <option [value]="b.id">{{ b.name }}{{ b.id === auth.user()?.barangayId ? ' (your barangay)' : '' }}</option>
+        }
+      </select>
+    </label>
+  </div>
+
+  @if (loading() && alerts().length === 0) {
+    <div class="loading"><span class="spinner"></span>Loading alerts…</div>
+  } @else if (loadError() && alerts().length === 0) {
+    <app-load-error title="Could not load alerts" [message]="loadError()!" [emergencyHint]="true" (retry)="reload()" />
+  } @else {
+    @if (loadError()) {
+      <div class="callout callout-warning" role="alert"><span class="icon">cloud_off</span>{{ loadError() }} Showing the last list that was loaded.</div>
+    }
+    <div class="stack" [class.refreshing]="loading()">
+      @for (alert of alerts(); track alert.id) {
+        <app-alert-card [alert]="alert" [myBarangayId]="auth.user()?.barangayId ?? null">
+          @if (alert.reportId && auth.isStaff()) {
+            <a class="btn btn-sm btn-ghost" [routerLink]="['/reports', alert.reportId]"><span class="icon">assignment</span>View report</a>
+          }
+          @if (auth.isManager() && alert.isActive) {
+            <button type="button" class="btn btn-sm btn-outline-danger" (click)="lift(alert)" [disabled]="lifting() === alert.id">
+              <span class="icon">notifications_off</span>Lift alert
+            </button>
+          }
+        </app-alert-card>
+      } @empty {
+        <div class="card empty">
+          <span class="icon">verified_user</span>
+          <h3>{{ tab() === 'active' ? 'No active alerts' : 'No past alerts' }}</h3>
+          <p>{{ tab() === 'active' ? 'All clear for now. New alerts will appear here the moment they are issued.' : 'Lifted and expired alerts are kept here for reference.' }}</p>
+        </div>
+      }
+    </div>
+  }
+</div>

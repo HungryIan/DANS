@@ -1,0 +1,127 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <h1>Operations dashboard</h1>
+      <p>{{ today | date: 'EEEE, MMMM d, y' }} · {{ realtime.connected() ? 'updating live' : 'reconnecting…' }}</p>
+    </div>
+    <div class="page-actions">
+      <a class="btn" routerLink="/monitor"><span class="icon">monitoring</span>Incident monitor</a>
+      @if (auth.isManager()) {
+        <a class="btn btn-danger" routerLink="/alerts/new"><span class="icon">add_alert</span>Issue alert</a>
+      }
+    </div>
+  </header>
+
+  @if (summary() && loadError()) {
+    <div class="callout callout-warning" role="alert"><span class="icon">cloud_off</span>{{ loadError() }} The numbers below may be out of date.</div>
+  }
+
+  @if (summary(); as s) {
+    <div class="stat-row stat-row-6" [class.refreshing]="refreshing()">
+      <a class="stat" routerLink="/alerts">
+        <span class="stat-label"><span class="stat-icon red"><span class="icon">campaign</span></span>Active alerts</span>
+        <span class="stat-value">{{ s.activeAlerts | number }}</span>
+        <span class="stat-sub">Warnings in effect now</span>
+      </a>
+      <a class="stat" routerLink="/monitor">
+        <span class="stat-label"><span class="stat-icon amber"><span class="icon">pending_actions</span></span>Awaiting verification</span>
+        <span class="stat-value">{{ s.pendingReports | number }}</span>
+        <span class="stat-sub">New reports to review</span>
+      </a>
+      <a class="stat" routerLink="/monitor">
+        <span class="stat-label"><span class="stat-icon blue"><span class="icon">fact_check</span></span>Verified</span>
+        <span class="stat-value">{{ s.verifiedReports | number }}</span>
+        <span class="stat-sub">Confirmed, response not started</span>
+      </a>
+      <a class="stat" routerLink="/monitor">
+        <span class="stat-label"><span class="stat-icon violet"><span class="icon">directions_run</span></span>Responding</span>
+        <span class="stat-value">{{ s.respondingReports | number }}</span>
+        <span class="stat-sub">Teams on the way or on site</span>
+      </a>
+      <a class="stat" routerLink="/records">
+        <span class="stat-label"><span class="stat-icon green"><span class="icon">task_alt</span></span>Resolved, last 7 days</span>
+        <span class="stat-value">{{ s.resolvedLast7Days | number }}</span>
+        <span class="stat-sub">{{ s.reportsLast24Hours | number }} new report(s) in the last 24 hours</span>
+      </a>
+      <a class="stat" routerLink="/evacuation-centers">
+        <span class="stat-label"><span class="stat-icon"><span class="icon">night_shelter</span></span>Evacuees</span>
+        <span class="stat-value">{{ s.totalEvacuees | number }}</span>
+        <span class="stat-sub">{{ s.openCenters }} of {{ s.totalCenters }} centers open · room for {{ spaceLeft(s) | number }} more</span>
+      </a>
+    </div>
+
+    <div class="grid grid-2" [class.refreshing]="refreshing()">
+      <section class="card">
+        <div class="card-header"><h2 class="card-title"><span class="icon">location_on</span>Open incidents by barangay</h2></div>
+        <div class="card-body">
+          <app-bar-list [items]="s.activeByBarangay" title="Open incidents by barangay" categoryName="Barangay"
+                        unit="incident" emptyText="No open incidents. All clear." />
+        </div>
+      </section>
+      <section class="card">
+        <div class="card-header"><h2 class="card-title"><span class="icon">category</span>Reports by type, last 30 days</h2></div>
+        <div class="card-body">
+          <app-bar-list [items]="s.byTypeLast30Days" title="Reports by type in the last 30 days" categoryName="Type"
+                        unit="report" emptyText="No reports in the last 30 days." />
+        </div>
+      </section>
+    </div>
+
+    <div class="split">
+      <section class="card">
+        <div class="card-header">
+          <h2 class="card-title"><span class="icon">history</span>Latest reports</h2>
+          <span class="small muted">{{ s.totalReports | number }} on record · <a class="link" routerLink="/records">View all</a></span>
+        </div>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr><th scope="col">Incident</th><th scope="col">Location</th><th scope="col">Status</th><th scope="col">Reported</th></tr>
+            </thead>
+            <tbody>
+              @for (r of s.recentReports; track r.id) {
+                <tr class="clickable" tabindex="0" (click)="open(r)" (keydown.enter)="open(r)">
+                  <td><div class="cell-title">{{ r.type }}</div><div class="cell-sub">{{ r.referenceNo }}</div></td>
+                  <td><div>{{ r.barangayName }}</div><div class="cell-sub">{{ r.location }}</div></td>
+                  <td><app-badge [value]="r.status" /></td>
+                  <td class="nowrap">{{ r.createdAt | timeAgo }}</td>
+                </tr>
+              } @empty {
+                <tr><td colspan="4" class="muted center">No reports yet.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-header">
+          <h2 class="card-title"><span class="icon">night_shelter</span>Evacuation capacity</h2>
+          <a class="link small" routerLink="/evacuation-centers">Centers</a>
+        </div>
+        <div class="card-body stack">
+          @for (c of activeCenters(); track c.id) {
+            <div class="stack-sm">
+              <div class="occupancy-line">
+                <span class="truncate" style="color: var(--text); font-weight: 500">{{ c.name }}</span>
+                <span class="nowrap"><strong>{{ c.currentOccupancy | number }}</strong> / {{ c.capacity | number }}</span>
+              </div>
+              <app-meter [value]="c.currentOccupancy" [max]="c.capacity" [label]="c.name + ': ' + c.currentOccupancy + ' of ' + c.capacity" />
+              @if (level(c) === 'critical') {
+                <span class="occupancy-flag critical"><span class="icon filled">error</span>Full</span>
+              } @else if (level(c) === 'warning') {
+                <span class="occupancy-flag warning"><span class="icon filled">warning</span>Nearly full</span>
+              }
+            </div>
+          } @empty {
+            <p class="muted small">No evacuation centers are open right now.</p>
+          }
+        </div>
+      </section>
+    </div>
+  } @else if (loadError()) {
+    <app-load-error title="Could not load the dashboard" [message]="loadError()!" (retry)="reload()" />
+  } @else {
+    <div class="loading"><span class="spinner"></span>Loading dashboard…</div>
+  }
+</div>

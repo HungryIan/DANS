@@ -1,0 +1,94 @@
+<div class="page">
+  <section class="hero">
+    <div>
+      <p class="eyebrow">Municipality of Compostela · Davao de Oro</p>
+      <h1>
+        @if (firstName()) { Hello, {{ firstName() }}. } Stay alert, stay safe.
+      </h1>
+      <p class="lead">
+        DANS sends real-time warnings during floods, earthquakes, landslides, fires and other emergencies, shows where to
+        evacuate, and lets you report incidents directly to local officials.
+      </p>
+      <div class="hero-actions">
+        <a class="btn btn-danger btn-lg" routerLink="/report"><span class="icon filled">sos</span>Report an emergency</a>
+        <a class="btn btn-light btn-lg" routerLink="/evacuation-centers"><span class="icon">night_shelter</span>Evacuation centers</a>
+      </div>
+    </div>
+    <a class="hotline-card" href="tel:911">
+      <span class="ring"><span class="icon filled">call</span></span>
+      <span>
+        <strong>911</strong>
+        <small>In immediate danger? Call now.</small>
+      </span>
+    </a>
+  </section>
+
+  <section class="stack">
+    <div class="section-head">
+      <h2>{{ auth.user()?.role === 'Resident' ? 'Alerts for your area' : 'Active alerts' }}</h2>
+      <a class="link" routerLink="/alerts">All alerts</a>
+    </div>
+
+    @if (!alerts.loaded()) {
+      <div class="loading"><span class="spinner"></span>Loading alerts…</div>
+    } @else {
+      @if (alerts.error(); as error) {
+        <div class="callout callout-danger" role="alert">
+          <span class="icon">cloud_off</span>
+          <div class="spacer">
+            <strong>Could not check for new alerts.</strong> {{ error }}
+            {{ alerts.alerts().length > 0 ? 'The alerts below are the last ones received.' : '' }}
+            In an emergency, call <a href="tel:911">911</a>.
+          </div>
+          <button type="button" class="btn btn-sm" (click)="alerts.refresh()"><span class="icon">refresh</span>Try again</button>
+        </div>
+      }
+      @for (alert of alerts.relevant(); track alert.id) {
+        <app-alert-card [alert]="alert" [myBarangayId]="auth.user()?.barangayId ?? null" />
+      } @empty {
+        @if (!alerts.error()) {
+          <div class="card all-clear">
+            <span class="ring"><span class="icon filled">verified_user</span></span>
+            <div>
+              <strong>No active alerts</strong>
+              <p class="text-2 small">There are no warnings for {{ auth.user()?.barangayName ? 'Barangay ' + auth.user()?.barangayName : 'the municipality' }} right now. Alerts will appear here instantly.</p>
+            </div>
+          </div>
+        }
+      }
+    }
+  </section>
+
+  <section class="grid grid-4">
+    <a class="card quick-card" routerLink="/evacuation-centers">
+      <span class="quick-icon" style="background: #dcfce7; color: #15803d"><span class="icon">night_shelter</span></span>
+      <h3>Evacuation centers</h3>
+      <p>{{ openCenters() === null ? 'Locations, capacity and directions.' : openCenters() + ' open now · capacity and directions' }}</p>
+    </a>
+    <a class="card quick-card" routerLink="/safety-guides">
+      <span class="quick-icon" style="background: #dbeafe; color: #1d4ed8"><span class="icon">health_and_safety</span></span>
+      <h3>Safety guides</h3>
+      <p>What to do before, during and after a disaster.</p>
+    </a>
+    <a class="card quick-card" routerLink="/hotlines">
+      <span class="quick-icon" style="background: #fde8e8; color: #b91c1c"><span class="icon">call</span></span>
+      <h3>Emergency hotlines</h3>
+      <p>Tap-to-call numbers for rescue, police and medical help.</p>
+    </a>
+    @if (auth.isLoggedIn()) {
+      <a class="card quick-card" [routerLink]="auth.isStaff() ? '/dashboard' : '/my-reports'">
+        <span class="quick-icon" style="background: #ede9fe; color: #6d28d9">
+          <span class="icon">{{ auth.isStaff() ? 'dashboard' : 'assignment' }}</span>
+        </span>
+        <h3>{{ auth.isStaff() ? 'Operations dashboard' : 'My reports' }}</h3>
+        <p>{{ auth.isStaff() ? 'Monitor incidents and response status.' : 'Follow the status of emergencies you reported.' }}</p>
+      </a>
+    } @else {
+      <a class="card quick-card" routerLink="/register">
+        <span class="quick-icon" style="background: #ede9fe; color: #6d28d9"><span class="icon">person_add</span></span>
+        <h3>Create an account</h3>
+        <p>Get instant alerts for your barangay and report emergencies.</p>
+      </a>
+    }
+  </section>
+</div>

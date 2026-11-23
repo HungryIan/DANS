@@ -1,0 +1,156 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <h1>Evacuation centers</h1>
+      <p>Where to go when told to evacuate: location, available space and contact person.</p>
+    </div>
+    @if (auth.isManager()) {
+      <a class="btn btn-primary" routerLink="/evacuation-centers/new"><span class="icon">add</span>Add center</a>
+    }
+  </header>
+
+  <div class="stat-row">
+    <div class="stat">
+      <span class="stat-label"><span class="stat-icon green"><span class="icon">door_open</span></span>Open</span>
+      <span class="stat-value">{{ totals().open }}</span>
+      <span class="stat-sub">Accepting evacuees</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label"><span class="stat-icon amber"><span class="icon">block</span></span>Full</span>
+      <span class="stat-value">{{ totals().full }}</span>
+      <span class="stat-sub">Go to another center</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label"><span class="stat-icon"><span class="icon">door_front</span></span>Closed</span>
+      <span class="stat-value">{{ totals().closed }}</span>
+      <span class="stat-sub">On standby</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label"><span class="stat-icon blue"><span class="icon">groups</span></span>Evacuees</span>
+      <span class="stat-value">{{ totals().evacuees | number }}</span>
+      <span class="stat-sub">Room for {{ totals().space | number }} more in open centers</span>
+    </div>
+  </div>
+
+  <section class="card">
+    <div class="card-header">
+      <div class="filters" style="flex: 1">
+        <label class="field">
+          <span class="field-label">Barangay</span>
+          <select class="input" (change)="onBarangayChange($event)">
+            <option value="">All barangays</option>
+            @for (b of barangays(); track b.id) {
+              <option [value]="b.id">{{ b.name }}{{ b.id === auth.user()?.barangayId ? ' (your barangay)' : '' }}</option>
+            }
+          </select>
+        </label>
+        <label class="field">
+          <span class="field-label">Status</span>
+          <select class="input" (change)="onStatusChange($event)">
+            <option value="">Any status</option>
+            @for (s of statuses; track s) {
+              <option [value]="s">{{ s }}</option>
+            }
+          </select>
+        </label>
+      </div>
+    </div>
+    <div class="card-body">
+      <app-map [markers]="markers()" height="340px" label="Map of evacuation centers" (markerClick)="scrollTo($event)" />
+      <div class="map-legend">
+        @for (s of statuses; track s) {
+          <span><span class="legend-dot" [style.background]="colors[s]"></span>{{ s }}</span>
+        }
+        <span class="muted">· Centers without map coordinates are listed below only.</span>
+      </div>
+    </div>
+  </section>
+
+  @if (loading()) {
+    <div class="loading"><span class="spinner"></span>Loading evacuation centers…</div>
+  } @else if (loadError() && centers().length === 0) {
+    <app-load-error title="Could not load evacuation centers" [message]="loadError()!" [emergencyHint]="true" (retry)="load()" />
+  } @else {
+    @if (loadError()) {
+      <div class="callout callout-warning" role="alert"><span class="icon">cloud_off</span>{{ loadError() }} Showing the last information that was loaded.</div>
+    }
+    <div class="grid grid-auto">
+      @for (c of filtered(); track c.id) {
+        <article class="card center-card" [id]="'center-' + c.id">
+          <div class="row top">
+            <div class="spacer" style="min-width: 0">
+              <h3>{{ c.name }}</h3>
+              <p class="small muted">{{ c.address }} · {{ c.barangayName }}</p>
+            </div>
+            <app-badge [value]="c.status" />
+          </div>
+
+          <div class="stack-sm">
+            <div class="occupancy-line">
+              <span>Evacuees</span>
+              <span><strong>{{ c.currentOccupancy | number }}</strong> / {{ c.capacity | number }}</span>
+            </div>
+            <app-meter [value]="c.currentOccupancy" [max]="c.capacity" [label]="c.name + ' occupancy'" />
+            @if (level(c) === 'critical') {
+              <span class="occupancy-flag critical"><span class="icon filled">error</span>Full — go to another center</span>
+            } @else if (level(c) === 'warning') {
+              <span class="occupancy-flag warning"><span class="icon filled">warning</span>Nearly full</span>
+            }
+          </div>
+
+          @if (facilities(c).length > 0) {
+            <div class="facilities">
+              @for (f of facilities(c); track f) {
+                <span class="chip">{{ f }}</span>
+              }
+            </div>
+          }
+
+          @if (c.contactPerson || c.contactNumber) {
+            <p class="small text-2 row gap-sm wrap">
+              <span class="icon" style="font-size: 18px">support_agent</span>
+              {{ c.contactPerson }}
+              @if (c.contactNumber) {
+                <a class="link" [href]="'tel:' + c.contactNumber">{{ c.contactNumber }}</a>
+              }
+            </p>
+          }
+          <p class="small muted" [title]="c.updatedAt | date: dateTime">Updated {{ c.updatedAt | timeAgo }}</p>
+
+          <div class="row wrap gap-sm">
+            @if (c.latitude !== null && c.longitude !== null) {
+              <a class="btn btn-sm" [href]="directions(c)" target="_blank" rel="noopener"><span class="icon">directions</span>Directions</a>
+            }
+            @if (auth.isStaff() && editingId() !== c.id) {
+              <button type="button" class="btn btn-sm" (click)="startEdit(c)"><span class="icon">edit_note</span>Update count</button>
+            }
+            @if (auth.isManager()) {
+              <a class="btn btn-sm btn-ghost" [routerLink]="['/evacuation-centers', c.id, 'edit']"><span class="icon">edit</span>Edit</a>
+            }
+          </div>
+
+          @if (editingId() === c.id) {
+            <div class="inline-form">
+              <label class="sr-only" [for]="'count-' + c.id">Evacuees</label>
+              <input class="input" type="number" min="0" [id]="'count-' + c.id" [value]="editCount()" (input)="onCountInput($event)" [disabled]="editStatus() === 'Closed'" />
+              <select class="input" style="width: 110px" [value]="editStatus()" (change)="onEditStatus($event)" aria-label="Status">
+                @for (s of statuses; track s) {
+                  <option [value]="s" [selected]="s === editStatus()">{{ s }}</option>
+                }
+              </select>
+              <button type="button" class="btn btn-sm btn-primary" (click)="saveCount(c)" [disabled]="saving()">Save</button>
+              <button type="button" class="btn btn-sm btn-ghost" (click)="editingId.set(null)">Cancel</button>
+            </div>
+            <p class="hint">{{ editStatus() === 'Closed' ? 'A closed center has 0 evacuees.' : 'Reaching the capacity marks the center Full automatically.' }}</p>
+          }
+        </article>
+      } @empty {
+        <div class="card empty" style="grid-column: 1 / -1">
+          <span class="icon">night_shelter</span>
+          <h3>No evacuation centers found</h3>
+          <p>Try another barangay or status.</p>
+        </div>
+      }
+    </div>
+  }
+</div>

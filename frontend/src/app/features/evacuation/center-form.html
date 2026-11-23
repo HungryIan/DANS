@@ -1,0 +1,104 @@
+<div class="page page-narrow">
+  <div>
+    <a class="back-link" routerLink="/evacuation-centers"><span class="icon">arrow_back</span>Evacuation centers</a>
+    <header class="page-header">
+      <div>
+        <h1>{{ isEdit() ? 'Edit evacuation center' : 'Add evacuation center' }}</h1>
+        <p>Opening a closed center automatically notifies residents of its barangay.</p>
+      </div>
+      @if (isEdit()) {
+        <button type="button" class="btn btn-outline-danger" (click)="remove()" [disabled]="busy()"><span class="icon">delete</span>Delete</button>
+      }
+    </header>
+  </div>
+
+  @if (loading()) {
+    <div class="loading"><span class="spinner"></span>Loading…</div>
+  } @else {
+    <form class="card card-body form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      @if (error()) {
+        <div class="callout callout-danger" role="alert"><span class="icon">error</span>{{ error() }}</div>
+      }
+
+      <div class="form-grid">
+        <label class="field span-2">
+          <span class="field-label">Name</span>
+          <input class="input" formControlName="name" placeholder="e.g. Compostela Central Elementary School" />
+          @if (invalid('name')) { <span class="error-text"><span class="icon">error</span>Enter a name.</span> }
+        </label>
+        <label class="field">
+          <span class="field-label">Barangay</span>
+          <select class="input" formControlName="barangayId">
+            <option [ngValue]="0" disabled>Select barangay</option>
+            @for (b of barangays(); track b.id) {
+              <option [ngValue]="b.id">{{ b.name }}</option>
+            }
+          </select>
+          @if (invalid('barangayId')) { <span class="error-text"><span class="icon">error</span>Select the barangay.</span> }
+        </label>
+        <label class="field">
+          <span class="field-label">Address / landmark</span>
+          <input class="input" formControlName="address" placeholder="e.g. Beside the barangay hall" />
+          @if (invalid('address')) { <span class="error-text"><span class="icon">error</span>Enter the address.</span> }
+        </label>
+        <label class="field">
+          <span class="field-label">Capacity (people)</span>
+          <input class="input" type="number" min="1" formControlName="capacity" />
+          @if (invalid('capacity')) { <span class="error-text"><span class="icon">error</span>Capacity must be at least 1.</span> }
+        </label>
+        <label class="field">
+          <span class="field-label">Current evacuees</span>
+          <input class="input" type="number" min="0" formControlName="currentOccupancy" />
+          @if (form.hasError('closedWithEvacuees') && form.controls.currentOccupancy.touched) {
+            <span class="error-text"><span class="icon">error</span>A closed center must have 0 evacuees.</span>
+          } @else {
+            <span class="hint">An open center becomes Full when it reaches capacity.</span>
+          }
+        </label>
+        <label class="field">
+          <span class="field-label">Status</span>
+          <select class="input" formControlName="status">
+            @for (s of statuses; track s) {
+              <option [ngValue]="s">{{ s }}</option>
+            }
+          </select>
+        </label>
+        <label class="field">
+          <span class="field-label">Facilities <span class="optional">(comma-separated)</span></span>
+          <input class="input" formControlName="facilities" placeholder="Water, Toilets, Medical station" />
+        </label>
+        <label class="field">
+          <span class="field-label">Contact person <span class="optional">(optional)</span></span>
+          <input class="input" formControlName="contactPerson" />
+        </label>
+        <label class="field">
+          <span class="field-label">Contact number <span class="optional">(optional)</span></span>
+          <input class="input" type="tel" formControlName="contactNumber" placeholder="09XXXXXXXXX" />
+          @if (invalid('contactNumber')) {
+            <span class="error-text"><span class="icon">error</span>{{ contactHint }}</span>
+          }
+        </label>
+      </div>
+
+      <div class="field">
+        <div class="row wrap" style="justify-content: space-between">
+          <span class="field-label">Map location <span class="optional">(click the map to set it)</span></span>
+          @if (location()) {
+            <button type="button" class="btn btn-sm btn-ghost" (click)="location.set(null)">Remove location</button>
+          }
+        </div>
+        <app-map [pickable]="true" [(picked)]="location" height="300px" label="Click to set the evacuation center location" />
+        <span class="hint">
+          @if (location(); as point) { {{ point.lat }}, {{ point.lng }} — residents get a "Directions" button. } @else { No location set. }
+        </span>
+      </div>
+
+      <div class="row" style="justify-content: flex-end">
+        <a class="btn btn-ghost" routerLink="/evacuation-centers">Cancel</a>
+        <button type="submit" class="btn btn-primary" [disabled]="busy()">
+          @if (busy()) { <span class="spinner"></span> } {{ isEdit() ? 'Save changes' : 'Add center' }}
+        </button>
+      </div>
+    </form>
+  }
+</div>

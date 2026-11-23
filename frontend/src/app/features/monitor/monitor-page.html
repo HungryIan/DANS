@@ -1,0 +1,96 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <h1>Incident monitor</h1>
+      <p>Every open emergency report, updated live as residents report and responders act.</p>
+    </div>
+    <span class="live" [class.on]="realtime.connected()">
+      <span class="live-dot"></span>{{ realtime.connected() ? 'Live updates on' : 'Reconnecting…' }}
+    </span>
+  </header>
+
+  <div class="card card-body filters">
+    <label class="field">
+      <span class="field-label">Barangay</span>
+      <select class="input" (change)="onBarangayChange($event)">
+        <option value="">All barangays</option>
+        @for (b of barangays(); track b.id) {
+          <option [value]="b.id">{{ b.name }}</option>
+        }
+      </select>
+    </label>
+    <label class="field">
+      <span class="field-label">Type</span>
+      <select class="input" (change)="onTypeChange($event)">
+        <option value="">All types</option>
+        @for (t of types; track t.value) {
+          <option [value]="t.value">{{ t.value }}</option>
+        }
+      </select>
+    </label>
+    @if (!auth.isManager()) {
+      <label class="check" style="height: 42px">
+        <input type="checkbox" [checked]="mineOnly()" (change)="onMineChange($event)" />Only reports assigned to me
+      </label>
+    }
+  </div>
+
+  <section class="card">
+    <div class="card-header">
+      <h2 class="card-title"><span class="icon">map</span>Incident map</h2>
+      <span class="small muted">{{ markers().length }} of {{ reports().length }} open reports have a pinned location</span>
+    </div>
+    <div class="card-body">
+      <app-map [markers]="markers()" height="320px" label="Map of open incidents" (markerClick)="openReport($event)" />
+      <div class="map-legend" aria-label="Severity legend">
+        @for (s of severities; track s.value) {
+          <span><span class="legend-dot" [style.background]="severityColors[s.value]"></span>{{ s.value }}</span>
+        }
+      </div>
+    </div>
+  </section>
+
+  @if (loading()) {
+    <div class="loading"><span class="spinner"></span>Loading incidents…</div>
+  } @else if (loadError() && reports().length === 0) {
+    <app-load-error title="Could not load the open incidents" [message]="loadError()!" (retry)="reload()" />
+  } @else {
+    @if (loadError()) {
+      <div class="callout callout-warning" role="alert"><span class="icon">cloud_off</span>{{ loadError() }} The board may be out of date.</div>
+    }
+    <div class="board">
+      @for (column of columns(); track column.status) {
+        <section class="column" [attr.aria-label]="column.status + ' reports'">
+          <div class="column-head">
+            <span class="row gap-sm"><app-badge [value]="column.status" /><span class="muted small">{{ column.items.length }}</span></span>
+          </div>
+          <p class="small muted" style="padding: 0 4px">{{ column.description }}</p>
+          @for (r of column.items; track r.id) {
+            <a [class]="'incident sev-' + r.severity.toLowerCase()" [class.is-new]="newIds().has(r.id)" [routerLink]="['/reports', r.id]">
+              <div class="incident-top">
+                <span class="strong">{{ r.referenceNo }}</span>
+                <span class="spacer"></span>
+                <span>{{ r.createdAt | timeAgo }}</span>
+              </div>
+              <h3><span class="icon">{{ r.type | typeIcon }}</span>{{ r.type }} · {{ r.barangayName }}</h3>
+              <p class="truncate">{{ r.location }}</p>
+              <div class="row wrap gap-sm mt-8">
+                <app-badge [value]="r.severity" />
+                @if (r.assignedToName) {
+                  <span class="chip"><span class="icon">person</span>{{ r.assignedToName }}</span>
+                } @else if (r.status !== 'Pending') {
+                  <span class="chip chip-danger"><span class="icon">person_off</span>Unassigned</span>
+                }
+                @if (r.peopleAffected) {
+                  <span class="chip"><span class="icon">groups</span>{{ r.peopleAffected }}</span>
+                }
+              </div>
+            </a>
+          } @empty {
+            <p class="empty small" style="padding: 20px 8px">Nothing here.</p>
+          }
+        </section>
+      }
+    </div>
+  }
+</div>

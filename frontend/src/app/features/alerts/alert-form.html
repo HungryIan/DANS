@@ -1,0 +1,119 @@
+<div class="page">
+  <div>
+    <a class="back-link" routerLink="/alerts"><span class="icon">arrow_back</span>Alerts</a>
+    <header class="page-header">
+      <div>
+        <h1>Issue an alert</h1>
+        <p>The alert is pushed instantly to everyone in the selected barangays and saved in their notifications.</p>
+      </div>
+    </header>
+  </div>
+
+  @if (linkedReport(); as report) {
+    <div class="callout callout-info">
+      <span class="icon">link</span>
+      <div>This alert is linked to report <a [routerLink]="['/reports', report.id]">{{ report.referenceNo }}</a>.</div>
+    </div>
+  }
+
+  <div class="split">
+    <form class="card card-body form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      @if (error()) {
+        <div class="callout callout-danger" role="alert"><span class="icon">error</span>{{ error() }}</div>
+      }
+
+      <label class="field">
+        <span class="field-label">Title</span>
+        <input class="input" formControlName="title" placeholder="e.g. Flash Flood Warning" maxlength="150" />
+        @if (form.controls.title.touched && form.controls.title.invalid) {
+          <span class="error-text"><span class="icon">error</span>Enter a title of at least 5 characters.</span>
+        }
+      </label>
+
+      <label class="field">
+        <span class="field-label">Type of hazard</span>
+        <select class="input" formControlName="type">
+          @for (t of types; track t.value) {
+            <option [ngValue]="t.value">{{ t.value }}</option>
+          }
+        </select>
+      </label>
+
+      <fieldset class="fieldset">
+        <legend>Severity</legend>
+        <div class="choice-grid">
+          @for (s of severities; track s.value) {
+            <label [class]="'choice sev sev-' + s.value.toLowerCase()">
+              <input type="radio" formControlName="severity" [value]="s.value" />
+              <span class="sev-name"><span class="sev-dot"></span>{{ s.value }}</span>
+              <small>{{ s.hint }}</small>
+            </label>
+          }
+        </div>
+      </fieldset>
+
+      <label class="field">
+        <span class="field-label">Message</span>
+        <textarea class="input" formControlName="message" rows="4" maxlength="2000"
+                  placeholder="What is happening, where, and what residents should expect."></textarea>
+        @if (form.controls.message.touched && form.controls.message.invalid) {
+          <span class="error-text"><span class="icon">error</span>Write a message of at least 10 characters.</span>
+        }
+      </label>
+
+      <label class="field">
+        <span class="row wrap" style="justify-content: space-between">
+          <span class="field-label">Evacuation and safety instructions <span class="optional">(one per line)</span></span>
+          @if (guideForType(); as guide) {
+            <button type="button" class="btn btn-sm btn-ghost" (click)="useGuideTips()">
+              <span class="icon">health_and_safety</span>Use "{{ guide.title }}" tips
+            </button>
+          }
+        </span>
+        <textarea class="input" formControlName="instructions" rows="5" maxlength="4000"
+                  placeholder="Go to the nearest open evacuation center.&#10;Bring your go-bag and important documents."></textarea>
+      </label>
+
+      <fieldset class="fieldset">
+        <legend>Who should receive it?</legend>
+        <div class="row wrap">
+          <label class="check"><input type="radio" formControlName="scope" value="selected" />Selected barangays</label>
+          <label class="check"><input type="radio" formControlName="scope" value="all" />Entire municipality</label>
+        </div>
+        @if (value().scope === 'selected') {
+          <div class="check-grid">
+            @for (b of barangays(); track b.id) {
+              <label class="check">
+                <input type="checkbox" [checked]="isSelected(b.id)" (change)="toggleBarangay(b.id, $event)" />{{ b.name }}
+              </label>
+            }
+          </div>
+          <div class="row gap-sm">
+            <button type="button" class="btn btn-sm btn-ghost" (click)="selectAll(true)">Select all</button>
+            <button type="button" class="btn btn-sm btn-ghost" (click)="selectAll(false)">Clear</button>
+            <span class="hint">{{ value().barangayIds.length }} selected</span>
+          </div>
+        }
+      </fieldset>
+
+      <label class="field" style="max-width: 300px">
+        <span class="field-label">Ends automatically at <span class="optional">(optional)</span></span>
+        <input class="input" type="datetime-local" formControlName="expiresAt" [min]="minExpiry" />
+        <span class="hint">Leave empty to keep the alert active until you lift it.</span>
+      </label>
+
+      <div class="row" style="justify-content: flex-end">
+        <a class="btn btn-ghost" routerLink="/alerts">Cancel</a>
+        <button type="submit" class="btn btn-danger btn-lg" [disabled]="busy()">
+          @if (busy()) { <span class="spinner"></span> } @else { <span class="icon">campaign</span> } Send alert
+        </button>
+      </div>
+    </form>
+
+    <aside class="preview stack-sm">
+      <h2 class="card-title"><span class="icon">visibility</span>Preview</h2>
+      <app-alert-card [alert]="preview()" />
+      <p class="hint">Residents see this card in the app, plus a pop-up with an alarm sound if they are online.</p>
+    </aside>
+  </div>
+</div>

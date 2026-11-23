@@ -1,0 +1,67 @@
+<div class="shell" [class.nav-open]="navOpen()">
+  <aside class="sidebar" aria-label="Main navigation">
+    <a class="brand" routerLink="/">
+      <span class="brand-mark"><span class="icon filled">crisis_alert</span></span>
+      <span>
+        <span class="brand-name">DANS</span>
+        <span class="brand-sub">Disaster Alert &amp; Notification System</span>
+      </span>
+    </a>
+
+    <nav class="nav">
+      @for (section of sections(); track section.title) {
+        <div class="nav-section">{{ section.title }}</div>
+        @for (item of section.items; track item.path) {
+          <a class="nav-link" [class.nav-sos]="item.sos" [routerLink]="item.path"
+             routerLinkActive="active" [routerLinkActiveOptions]="{ exact: !!item.exact }">
+            <span class="icon" [class.filled]="item.sos">{{ item.icon }}</span>
+            {{ item.label }}
+            @if (item.count) {
+              <span class="nav-count">{{ item.count > 99 ? '99+' : item.count }}</span>
+            }
+          </a>
+        }
+      }
+    </nav>
+
+    <div class="sidebar-foot">
+      <a href="tel:911">
+        <span class="icon filled">call</span>
+        <span><strong>911</strong><small>National emergency hotline</small></span>
+      </a>
+    </div>
+    <a class="sidebar-link" routerLink="/privacy">Privacy notice</a>
+  </aside>
+
+  <div class="backdrop" (click)="navOpen.set(false)"></div>
+
+  <div class="main">
+    <header class="topbar">
+      <button type="button" class="btn btn-ghost btn-icon menu-btn" (click)="navOpen.set(!navOpen())"
+              [attr.aria-expanded]="navOpen()" aria-label="Toggle menu">
+        <span class="icon">menu</span>
+      </button>
+      <span class="spacer"></span>
+
+      <span class="live" [class.on]="realtime.connected()"
+            [title]="realtime.connected() ? 'Connected: alerts arrive instantly' : 'Reconnecting to the live alert service…'">
+        <span class="live-dot"></span>
+        <span class="live-text">{{ realtime.connected() ? 'Live' : 'Connecting…' }}</span>
+      </span>
+
+      @if (auth.isLoggedIn()) {
+        <app-notification-bell />
+        <app-user-menu />
+      } @else {
+        <a class="btn btn-ghost" routerLink="/login">Sign in</a>
+        <a class="btn btn-primary" routerLink="/register">Create account</a>
+      }
+    </header>
+
+    <app-alert-banner />
+
+    <main class="content">
+      <router-outlet />
+    </main>
+  </div>
+</div>

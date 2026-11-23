@@ -1,0 +1,47 @@
+### Sample requests for the DANS API (VS Code REST Client or Visual Studio).
+### Sign-in uses an HttpOnly cookie: run "Sign in" first — the tool keeps the cookie for the following requests.
+### Requests that change data must include the header X-Requested-With: XMLHttpRequest (CSRF protection).
+@baseUrl = https://localhost:7180
+
+### Sign in
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+X-Requested-With: XMLHttpRequest
+
+{
+  "email": "official@dans.local",
+  "password": "Demo@123"
+}
+
+### Who is signed in
+GET {{baseUrl}}/api/auth/session
+
+### Active alerts (public)
+GET {{baseUrl}}/api/alerts?status=active
+
+### Evacuation centers (public)
+GET {{baseUrl}}/api/evacuation-centers
+
+### Dashboard summary (staff)
+GET {{baseUrl}}/api/dashboard
+
+### Active incident reports (staff)
+GET {{baseUrl}}/api/reports?activeOnly=true
+
+### Issue an alert to two barangays (officials and admins)
+POST {{baseUrl}}/api/alerts
+Content-Type: application/json
+X-Requested-With: XMLHttpRequest
+
+{
+  "title": "Flash Flood Warning",
+  "message": "Water levels in the river are rising quickly. Residents near the riverbank should evacuate now.",
+  "instructions": "Go to the nearest open evacuation center.\nDo not cross flooded roads.",
+  "type": "Flood",
+  "severity": "Critical",
+  "barangayIds": [12, 14]
+}
+
+### Sign out (ends the session on the server)
+POST {{baseUrl}}/api/auth/logout
+X-Requested-With: XMLHttpRequest

@@ -1,0 +1,120 @@
+<div class="page page-narrow">
+  <header class="page-header">
+    <div>
+      <h1>Report an emergency</h1>
+      <p>Your report goes straight to local officials and responders, and you can follow its status.</p>
+    </div>
+  </header>
+
+  <div class="callout callout-danger">
+    <span class="icon filled">call</span>
+    <div><strong>Is someone's life in danger right now?</strong> Call <a href="tel:911">911</a> first, then send this report.</div>
+  </div>
+
+  <form class="card card-body form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    @if (error()) {
+      <div class="callout callout-danger" role="alert"><span class="icon">error</span>{{ error() }}</div>
+    }
+
+    <fieldset class="fieldset">
+      <legend>1. What is happening?</legend>
+      <div class="choice-grid">
+        @for (t of types; track t.value) {
+          <label class="choice">
+            <input type="radio" formControlName="type" [value]="t.value" />
+            <span class="icon">{{ t.icon }}</span>{{ t.value }}
+          </label>
+        }
+      </div>
+      @if (invalid('type')) {
+        <span class="error-text"><span class="icon">error</span>Choose the type of emergency.</span>
+      }
+    </fieldset>
+
+    <fieldset class="fieldset">
+      <legend>2. How serious is it?</legend>
+      <div class="choice-grid">
+        @for (s of severities; track s.value) {
+          <label [class]="'choice sev sev-' + s.value.toLowerCase()">
+            <input type="radio" formControlName="severity" [value]="s.value" />
+            <span class="sev-name"><span class="sev-dot"></span>{{ s.value }}</span>
+            <small>{{ s.hint }}</small>
+          </label>
+        }
+      </div>
+      @if (invalid('severity')) {
+        <span class="error-text"><span class="icon">error</span>Choose how serious the situation is.</span>
+      }
+    </fieldset>
+
+    <fieldset class="fieldset">
+      <legend>3. Where is it happening?</legend>
+      <div class="form-grid">
+        <label class="field">
+          <span class="field-label">Barangay</span>
+          <select class="input" formControlName="barangayId">
+            <option [ngValue]="0" disabled>Select barangay</option>
+            @for (b of barangays(); track b.id) {
+              <option [ngValue]="b.id">{{ b.name }}</option>
+            }
+          </select>
+          @if (invalid('barangayId')) {
+            <span class="error-text"><span class="icon">error</span>Select the barangay.</span>
+          }
+        </label>
+        <label class="field">
+          <span class="field-label">Purok, street or landmark</span>
+          <input class="input" formControlName="location" maxlength="200" placeholder="e.g. Purok 3, near the bridge" />
+          @if (invalid('location')) {
+            <span class="error-text"><span class="icon">error</span>Describe where it is happening.</span>
+          }
+        </label>
+      </div>
+
+      <div class="field">
+        <div class="row wrap" style="justify-content: space-between">
+          <span class="field-label">Pin the exact spot <span class="optional">(optional — helps responders find it)</span></span>
+          <span class="row gap-sm">
+            @if (location()) {
+              <button type="button" class="btn btn-sm btn-ghost" (click)="location.set(null)">Remove pin</button>
+            }
+            <button type="button" class="btn btn-sm" (click)="useMyLocation()" [disabled]="locating()">
+              <span class="icon">my_location</span>{{ locating() ? 'Locating…' : 'Use my location' }}
+            </button>
+          </span>
+        </div>
+        <app-map [pickable]="true" [(picked)]="location" height="280px" label="Tap the map to pin the incident location" />
+        <span class="hint">
+          @if (location(); as point) {
+            Pinned at {{ point.lat }}, {{ point.lng }}. Tap elsewhere to move the pin.
+          } @else {
+            Tap the map to drop a pin.
+          }
+        </span>
+      </div>
+    </fieldset>
+
+    <fieldset class="fieldset">
+      <legend>4. Details</legend>
+      <label class="field">
+        <span class="field-label">Describe the situation</span>
+        <textarea class="input" formControlName="description" rows="4" maxlength="2000"
+                  placeholder="What do you see? Is anyone hurt or trapped? Is it getting worse?"></textarea>
+        @if (invalid('description')) {
+          <span class="error-text"><span class="icon">error</span>Write at least 10 characters.</span>
+        }
+      </label>
+      <label class="field" style="max-width: 260px">
+        <span class="field-label">People affected <span class="optional">(estimate)</span></span>
+        <input class="input" type="number" min="0" formControlName="peopleAffected" placeholder="0" />
+      </label>
+    </fieldset>
+
+    <div class="row" style="justify-content: flex-end">
+      <a class="btn btn-ghost" routerLink="/">Cancel</a>
+      <button type="submit" class="btn btn-danger btn-lg" [disabled]="busy()">
+        @if (busy()) { <span class="spinner"></span> } @else { <span class="icon filled">send</span> } Send report
+      </button>
+    </div>
+  </form>
+</div>

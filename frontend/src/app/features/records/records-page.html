@@ -1,0 +1,120 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <h1>Incident records</h1>
+      <p>Every reported incident with its full history, kept for documentation and future planning.</p>
+    </div>
+    @if (auth.isManager()) {
+      <button type="button" class="btn" (click)="exportCsv()" [disabled]="exporting() || !result()?.totalCount">
+        @if (exporting()) { <span class="spinner" style="border-color: var(--surface-3); border-top-color: var(--primary)"></span> }
+        @else { <span class="icon">download</span> }
+        Export CSV
+      </button>
+    }
+  </header>
+
+  <div class="card card-body filters">
+    <label class="field wide">
+      <span class="field-label">Search</span>
+      <input #searchBox class="input" type="search" placeholder="Reference no., location, description or reporter" (input)="onSearch($event)" />
+    </label>
+    <label class="field">
+      <span class="field-label">Status</span>
+      <select #statusSelect class="input" (change)="onSelect('status', $event)">
+        <option value="">All statuses</option>
+        @for (s of statuses; track s) {
+          <option [value]="s">{{ s }}</option>
+        }
+      </select>
+    </label>
+    <label class="field">
+      <span class="field-label">Type</span>
+      <select #typeSelect class="input" (change)="onSelect('type', $event)">
+        <option value="">All types</option>
+        @for (t of types; track t.value) {
+          <option [value]="t.value">{{ t.value }}</option>
+        }
+      </select>
+    </label>
+    <label class="field">
+      <span class="field-label">Barangay</span>
+      <select #barangaySelect class="input" (change)="onSelect('barangayId', $event)">
+        <option value="">All barangays</option>
+        @for (b of barangays(); track b.id) {
+          <option [value]="b.id">{{ b.name }}</option>
+        }
+      </select>
+    </label>
+    <label class="field">
+      <span class="field-label">From</span>
+      <input class="input" type="date" [value]="filters().from" [max]="filters().to || null" (change)="onDate('from', $event)" />
+    </label>
+    <label class="field">
+      <span class="field-label">To</span>
+      <input class="input" type="date" [value]="filters().to" [min]="filters().from || null" (change)="onDate('to', $event)" />
+    </label>
+    @if (hasFilters()) {
+      <button type="button" class="btn btn-ghost" (click)="clearFilters(searchBox, statusSelect, typeSelect, barangaySelect)">
+        <span class="icon">filter_alt_off</span>Clear
+      </button>
+    }
+  </div>
+
+  <section class="card" [class.refreshing]="loading() && !!result()">
+    @if (!result() && loading()) {
+      <div class="loading"><span class="spinner"></span>Loading records…</div>
+    } @else if (loadError() && !result()) {
+      <app-load-error title="Could not load the incident records" [message]="loadError()!" (retry)="reload()" />
+    } @else if (result(); as r) {
+      @if (loadError()) {
+        <div class="callout callout-warning" role="alert" style="margin: 12px"><span class="icon">cloud_off</span>{{ loadError() }}</div>
+      }
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">Reference</th>
+              <th scope="col">Reported</th>
+              <th scope="col">Incident</th>
+              <th scope="col">Location</th>
+              <th scope="col">Status</th>
+              <th scope="col">Assigned to</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (report of r.items; track report.id) {
+              <tr class="clickable" tabindex="0" (click)="open(report)" (keydown.enter)="open(report)">
+                <td><a class="link" [routerLink]="['/reports', report.id]" (click)="$event.stopPropagation()">{{ report.referenceNo }}</a></td>
+                <td class="nowrap">{{ report.createdAt | date: dateTime }}</td>
+                <td>
+                  <div class="cell-title">{{ report.type }}</div>
+                  <app-badge [value]="report.severity" />
+                </td>
+                <td>
+                  <div class="cell-title">{{ report.barangayName }}</div>
+                  <div class="cell-sub">{{ report.location }}</div>
+                </td>
+                <td><app-badge [value]="report.status" /></td>
+                <td>{{ report.assignedToName ?? '—' }}</td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="6">
+                  <div class="empty"><span class="icon">search_off</span><h3>No records found</h3><p>Try different filters.</p></div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="pager">
+        <span>{{ range() }}</span>
+        <span class="row gap-sm">
+          <button type="button" class="btn btn-sm" (click)="goTo(page() - 1)" [disabled]="page() <= 1"><span class="icon">chevron_left</span>Previous</button>
+          <span>Page {{ page() }} of {{ pageCount() }}</span>
+          <button type="button" class="btn btn-sm" (click)="goTo(page() + 1)" [disabled]="page() >= pageCount()">Next<span class="icon">chevron_right</span></button>
+        </span>
+      </div>
+    }
+  </section>
+</div>

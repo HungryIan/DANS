@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>DANS event flow</title>
+<style>
+  body { margin: 0; background: #fff; font-family: Arial, Helvetica, sans-serif; }
+  svg { display: block; }
+  .box { fill: #eef3fa; stroke: #8eb4e3; stroke-width: 1.5; }
+  .box-dark { fill: #24364d; stroke: #24364d; }
+  .box-hub { fill: #1b75bb; stroke: #1b75bb; }
+  .box-db { fill: #fff; stroke: #24364d; stroke-width: 1.5; }
+  .step { font-size: 11px; font-weight: 700; fill: #6fa0dc; letter-spacing: 0.06em; }
+  .title { font-size: 13.5px; font-weight: 700; fill: #24364d; }
+  .text { font-size: 11.5px; fill: #3c4b5c; }
+  .white { fill: #fff; }
+  .lane { font-size: 11px; font-weight: 700; fill: #8a99ab; letter-spacing: 0.1em; }
+  .arrow { stroke: #1b75bb; stroke-width: 2; fill: none; marker-end: url(#head); }
+  .arrow-back { stroke: #6fa0dc; stroke-width: 2; fill: none; stroke-dasharray: 6 4; marker-end: url(#head-light); }
+  .label { font-size: 11px; fill: #1b75bb; font-weight: 700; }
+  .label-light { font-size: 11px; fill: #4f81bd; font-weight: 700; }
+</style>
+</head>
+<body>
+<svg id="diagram" width="1100" height="640" viewBox="0 0 1100 640" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#1b75bb" />
+    </marker>
+    <marker id="head-light" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#6fa0dc" />
+    </marker>
+  </defs>
+
+  <!-- Lane labels -->
+  <text class="lane" x="20" y="24">BROWSER (ANGULAR)</text>
+  <text class="lane" x="20" y="224">SERVER (ASP.NET CORE WEB API)</text>
+  <text class="lane" x="300" y="420">PUSHED IN REAL TIME TO EVERY SCREEN CONCERNED</text>
+  <line x1="20" y1="200" x2="1080" y2="200" stroke="#dbe5f1" stroke-width="1" />
+  <line x1="20" y1="400" x2="1080" y2="400" stroke="#dbe5f1" stroke-width="1" />
+
+  <!-- Row 1: browser -->
+  <rect class="box-dark" x="20" y="40" width="230" height="130" rx="10" />
+  <text class="step white" x="36" y="64" opacity="0.8">1 · USER ACTION</text>
+  <text class="title white" x="36" y="86">Official clicks "Save update"</text>
+  <text class="text white" x="36" y="108">Status: Verified</text>
+  <text class="text white" x="36" y="126">☑ Alert residents of Poblacion</text>
+  <text class="text white" x="36" y="150" opacity="0.85">Report RPT-2026-00006</text>
+
+  <rect class="box" x="290" y="40" width="230" height="130" rx="10" />
+  <text class="step" x="306" y="64">2 · COMPONENT</text>
+  <text class="title" x="306" y="86">ReportDetailPage</text>
+  <text class="text" x="306" y="108">submitUpdate() reads the</text>
+  <text class="text" x="306" y="126">reactive form and disables</text>
+  <text class="text" x="306" y="144">the button while saving</text>
+
+  <rect class="box" x="560" y="40" width="230" height="130" rx="10" />
+  <text class="step" x="576" y="64">3 · SERVICE</text>
+  <text class="title" x="576" y="86">ReportsApi.addUpdate()</text>
+  <text class="text" x="576" y="108">HttpClient + interceptor adds</text>
+  <text class="text" x="576" y="126">the CSRF header; the HttpOnly</text>
+  <text class="text" x="576" y="144">sign-in cookie goes along</text>
+
+  <rect class="box" x="830" y="40" width="250" height="130" rx="10" />
+  <text class="step" x="846" y="64">4 · HTTP REQUEST (HTTPS)</text>
+  <text class="title" x="846" y="86">POST /api/reports/6/updates</text>
+  <text class="text" x="846" y="108">{ status: "Verified",</text>
+  <text class="text" x="846" y="126">  notifyResidents: true,</text>
+  <text class="text" x="846" y="144">  note: "Confirmed by tanod" }</text>
+
+  <path class="arrow" d="M250,105 L288,105" />
+  <path class="arrow" d="M520,105 L558,105" />
+  <path class="arrow" d="M790,105 L828,105" />
+
+  <!-- Row 2: server (right to left) -->
+  <rect class="box" x="830" y="240" width="250" height="140" rx="10" />
+  <text class="step" x="846" y="264">5 · API CONTROLLER</text>
+  <text class="title" x="846" y="286">ReportsController.AddUpdate</text>
+  <text class="text" x="846" y="308">Session + role check (Official),</text>
+  <text class="text" x="846" y="326">validates the request and the</text>
+  <text class="text" x="846" y="344">status rules (closed reports, …)</text>
+
+  <rect class="box-db" x="560" y="240" width="230" height="140" rx="10" />
+  <text class="step" x="576" y="264">6 · DATABASE (EF CORE → SQLITE)</text>
+  <text class="title" x="576" y="286">Save report + timeline</text>
+  <text class="text" x="576" y="308">IncidentReports.Status = Verified</text>
+  <text class="text" x="576" y="326">ReportUpdates: new entry</text>
+  <text class="text" x="576" y="344">(who, when, note)</text>
+
+  <rect class="box" x="290" y="240" width="230" height="140" rx="10" />
+  <text class="step" x="306" y="264">7 · SERVICES</text>
+  <text class="title" x="306" y="286">AlertService.IssueAsync</text>
+  <text class="text" x="306" y="308">Saves the area alert with the</text>
+  <text class="text" x="306" y="326">flood safety tips; Notification-</text>
+  <text class="text" x="306" y="344">Service fills every resident's inbox</text>
+
+  <rect class="box-hub" x="20" y="240" width="230" height="140" rx="10" />
+  <text class="step white" x="36" y="264" opacity="0.85">8 · SIGNALR HUB</text>
+  <text class="title white" x="36" y="286">NotificationHub</text>
+  <text class="text white" x="36" y="308">Pushes events over WebSockets</text>
+  <text class="text white" x="36" y="326">to groups: barangay-12,</text>
+  <text class="text white" x="36" y="344">staff, and single users</text>
+
+  <path class="arrow" d="M955,170 L955,238" />
+  <path class="arrow" d="M830,310 L792,310" />
+  <path class="arrow" d="M560,310 L522,310" />
+  <path class="arrow" d="M290,310 L252,310" />
+  <!-- HTTP response back to the official -->
+  <path class="arrow-back" d="M1060,240 L1060,185 Q1060,178 1053,178 L170,178 Q135,178 135,172" />
+  <text class="label-light" x="610" y="194">HTTP 200 → toast "Report marked as Verified · alert sent"</text>
+
+  <!-- Row 3: receivers -->
+  <path class="arrow" d="M135,380 L135,458" />
+  <path d="M135,432 L955,432" stroke="#1b75bb" stroke-width="2" fill="none" />
+  <path class="arrow" d="M410,432 L410,458" />
+  <path class="arrow" d="M680,432 L680,458" />
+  <path class="arrow" d="M955,432 L955,458" />
+  <text class="label" x="145" y="452">alertIssued → barangay-12</text>
+  <text class="label" x="420" y="452">alertsChanged → everyone</text>
+  <text class="label" x="690" y="452">notification → reporter</text>
+  <text class="label" x="965" y="452">reportChanged → staff</text>
+
+  <rect class="box" x="20" y="460" width="240" height="160" rx="10" />
+  <text class="step" x="36" y="484">RESIDENTS OF POBLACION</text>
+  <text class="title" x="36" y="506">IncomingAlert popup</text>
+  <text class="text" x="36" y="528">Full-screen alert with alarm</text>
+  <text class="text" x="36" y="546">sound and "What to do" steps;</text>
+  <text class="text" x="36" y="564">desktop notification if the</text>
+  <text class="text" x="36" y="582">tab is in the background</text>
+
+  <rect class="box" x="290" y="460" width="240" height="160" rx="10" />
+  <text class="step" x="306" y="484">EVERYONE (INCL. VISITORS)</text>
+  <text class="title" x="306" y="506">ActiveAlertsStore</text>
+  <text class="text" x="306" y="528">Reloads active alerts: red</text>
+  <text class="text" x="306" y="546">banner under the top bar,</text>
+  <text class="text" x="306" y="564">sidebar count, Home and</text>
+  <text class="text" x="306" y="582">Alerts pages</text>
+
+  <rect class="box" x="560" y="460" width="240" height="160" rx="10" />
+  <text class="step" x="576" y="484">THE REPORTER</text>
+  <text class="title" x="576" y="506">NotificationStore</text>
+  <text class="text" x="576" y="528">Toast "Update on your report",</text>
+  <text class="text" x="576" y="546">bell count +1; the open report</text>
+  <text class="text" x="576" y="564">page and My reports reload</text>
+  <text class="text" x="576" y="582">and show "Verified"</text>
+
+  <rect class="box" x="830" y="460" width="250" height="160" rx="10" />
+  <text class="step" x="846" y="484">ALL STAFF (STAFF GROUP)</text>
+  <text class="title" x="846" y="506">Monitor and dashboard</text>
+  <text class="text" x="846" y="528">The card moves to the Verified</text>
+  <text class="text" x="846" y="546">column; counts and charts</text>
+  <text class="text" x="846" y="564">update without a page refresh</text>
+</svg>
+</body>
+</html>

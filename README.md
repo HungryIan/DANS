@@ -42,9 +42,22 @@ Visitors who are not signed in can still read alerts, evacuation centers, safety
 
 ### Requirements
 
-- [.NET 10 SDK](https://dotnet.microsoft.com/download)
+- [.NET 10 SDK](https://dotnet.microsoft.com/download). Check with `dotnet --list-sdks`; a line starting with `10.` must
+  appear. The .NET *Runtime* alone is not enough.
 - [Node.js](https://nodejs.org/) 22 or newer (npm is included)
 - An internet connection for the map tiles and fonts
+
+### Quick start (after downloading the project)
+
+DANS has **two parts that must both run**: the API (`backend/Dans.Api`, the server and database) and the website
+(`frontend`). The simplest way to run both is one window:
+
+1. Install the requirements above, then run `dotnet dev-certs https --trust` once (step 0 below).
+2. Double-click **`present.cmd`** in the DANS folder. The first run installs and builds the website, which takes a few
+   minutes.
+3. When the window shows the addresses, open **https://localhost:7180**.
+
+For development, with the page reloading as you edit code, use two windows instead (steps 0–2 below).
 
 ### 0. Trust the HTTPS development certificate (once per computer)
 
@@ -81,6 +94,20 @@ certificate to `frontend/certs/` (git-ignored). The Angular dev server forwards 
 (see `frontend/proxy.conf.json`), so both must be running.
 
 > Windows PowerShell 5.1 does not support `&&`. Run the commands on separate lines (or join them with `;`).
+
+### "Cannot check for alerts right now" and "Connecting…"
+
+This means the website is running but **the API is not**. The `npm start` window then shows
+`http proxy error … ECONNREFUSED`. Check the window where you ran `dotnet run`:
+
+| What you see | Fix |
+|---|---|
+| No API window, or `dotnet run` was run in the wrong folder ("Couldn't find a project to run") | Open a second window: `cd backend\Dans.Api`, then `dotnet run` |
+| "'dotnet' is not recognized", "No .NET SDKs were found" or "The current .NET SDK does not support targeting .NET 10.0" | Install the .NET 10 **SDK**, open a new window and check with `dotnet --list-sdks` |
+| "Unable to configure HTTPS endpoint… the default developer certificate could not be found" | `dotnet dev-certs https --trust`, then `dotnet run` again |
+| "Failed to bind to address … address already in use" | Another DANS is already running (maybe `present.cmd`). Close it, or use that one |
+
+Once the API shows "Now listening on: https://localhost:7180", the website reconnects by itself within a few seconds.
 
 ### Demo accounts (Development only)
 
